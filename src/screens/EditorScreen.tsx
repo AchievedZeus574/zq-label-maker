@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {generateZPL} from '../utils/zplGenerator';
 import {
   View,
   Text,
@@ -38,6 +39,7 @@ export default function EditorScreen() {
   const [selectedSize, setSelectedSize] = useState<LabelSize>(LABEL_SIZES[0]);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
   const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('center');
+  const [zplOutput, setZplOutput] = useState<string>('');
 
   const addLine = () => {
     setLines(prev => [
@@ -45,8 +47,8 @@ export default function EditorScreen() {
       {
         id: Date.now().toString(),
         content: '',
-        fontSize: 'medium',
-        align: 'center',
+        fontSize: 'large',
+        align: 'left',
         bold: false,
       },
     ]);
@@ -68,6 +70,17 @@ export default function EditorScreen() {
     if (swapIndex < 0 || swapIndex >= newLines.length) return;
     [newLines[index], newLines[swapIndex]] = [newLines[swapIndex], newLines[index]];
     setLines(newLines);
+  };
+
+  const previewZPL = () => {
+  const zpl = generateZPL(
+    lines,
+    selectedSize.widthIn,
+    selectedSize.heightIn,
+    orientation,
+    verticalAlign,
+  );
+    setZplOutput(zpl);
   };
 
   return (
@@ -202,6 +215,7 @@ export default function EditorScreen() {
     <View
   style={[
     styles.previewBox,
+    // eslint-disable-next-line react-native/no-inline-styles
     {
       aspectRatio:
         orientation === 'landscape'
@@ -235,12 +249,23 @@ export default function EditorScreen() {
     </View>
   </View>
 )}
+{/* ZPL Output */}
+{zplOutput !== '' && (
+  <View style={styles.sizeSelector}>
+    <Text style={styles.sectionTitle}>ZPL Output</Text>
+    <Text selectable style={styles.zplText}>{zplOutput}</Text>
+  </View>
+)}
       </ScrollView>
 
-      {/* Add Line Button */}
-      <TouchableOpacity style={styles.addButton} onPress={addLine}>
-        <Text style={styles.addButtonText}>+ Add Line</Text>
-      </TouchableOpacity>
+<View style={styles.buttonRow}>
+  <TouchableOpacity style={styles.addButton} onPress={addLine}>
+    <Text style={styles.addButtonText}>+ Add Line</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={styles.zplButton} onPress={previewZPL}>
+    <Text style={styles.addButtonText}>Generate ZPL</Text>
+  </TouchableOpacity>
+</View>
     </View>
   );
 }
@@ -290,7 +315,7 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {color: '#dc2626', fontWeight: 'bold'},
   addButton: {
-    margin: 16,
+    felx: 1,
     backgroundColor: '#1a73e8',
     borderRadius: 8,
     padding: 16,
@@ -316,5 +341,22 @@ previewBox: {
 previewText: {
   width: '100%',
   color: '#000',
+},
+buttonRow: {
+  flexDirection: 'row',
+  gap: 8,
+  margin: 16,
+},
+zplButton: {
+  flex: 1,
+  backgroundColor: '#16a34a',
+  borderRadius: 8,
+  padding: 16,
+  alignItems: 'center',
+},
+zplText: {
+  fontFamily: 'monospace',
+  fontSize: 11,
+  color: '#333',
 },
 });
