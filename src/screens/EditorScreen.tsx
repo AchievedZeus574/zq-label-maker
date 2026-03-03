@@ -30,8 +30,8 @@ type LabelSize = {
 };
 
 const LABEL_SIZES: LabelSize[] = [
-  {id: '1.5x2', label: '1.5" × 2"', widthIn: 1.5, heightIn: 2},
-  {id: '3x2', label: '3" × 2"', widthIn: 3, heightIn: 2},
+  {id: '1.5x2', label: 'Shelf Label', widthIn: 1.5, heightIn: 2},
+  {id: '3x2', label: 'VizPick Label', widthIn: 3, heightIn: 2},
 ];
 
 export default function EditorScreen() {
