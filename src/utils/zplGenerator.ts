@@ -28,7 +28,7 @@ export function generateZPL(
 
   const paddingDots = 20;
   const usableWidth = labelWidthDots - paddingDots * 2;
-  const usableHeight = labelHeightDots - paddingDots * 2;
+  //const usableHeight = labelHeightDots - paddingDots * 2;
 
   const lineHeights = lines.map(l => fontHeightMap[l.fontSize]);
   const lineGap = 10;
@@ -49,6 +49,9 @@ export function generateZPL(
 
   let zpl = '';
   zpl += '^XA\n';
+  zpl += '^POI\n';  // Compensate for inverted printer loading
+  zpl += '^MMA\n';  // Black mark media sensing
+  zpl += '^PQ1\n';  // Print exactly 1 label
   zpl += '^PON\n';          // Normal print orientation
   zpl += '^LH0,0\n';        // Home position
   zpl += `^PW${labelWidthDots}\n`;

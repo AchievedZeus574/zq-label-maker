@@ -13,7 +13,6 @@ import {
   Platform,
 } from 'react-native';
 import RNBluetoothClassic, {
-  BluetoothDevice,
 } from 'react-native-bluetooth-classic';
 
 const normalizeMac = (mac: string): string => {
@@ -26,7 +25,7 @@ const normalizeMac = (mac: string): string => {
 };
 
 export default function PrinterScreen() {
-  const {printer: savedPrinter, setPrinter: setSavedPrinter, isConnected: connected, setIsConnected: setConnected} = usePrinter();
+  const {printerMac, setPrinterMac} = usePrinter();
   const [connecting, setConnecting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [macModalVisible, setMacModalVisible] = useState(false);
@@ -83,28 +82,23 @@ const submitManualMac = () => {
 };
 
   const connectToMac = async (rawMac: string) => {
-    const mac = normalizeMac(rawMac);
-    setConnecting(true);
-    try {
-      const device = await RNBluetoothClassic.connectToDevice(mac);
-      setSavedPrinter(device);
-      setConnected(true);
-      Alert.alert('Connected', `Connected to printer at ${mac}`);
-    } catch {
-      Alert.alert('Connection Failed', `Could not connect to ${mac}. Make sure the printer is on and in pairing mode.`);
-    } finally {
-      setConnecting(false);
-    }
-  };
+  const mac = normalizeMac(rawMac);
+  setConnecting(true);
+  try {
+    // Just verify we can connect, then immediately disconnect
+    const device = await RNBluetoothClassic.connectToDevice(mac);
+    await device.disconnect();
+    setPrinterMac(mac);
+    Alert.alert('Printer Saved', `Printer ${mac} has been saved successfully.`);
+  } catch {
+    Alert.alert('Connection Failed', `Could not connect to ${mac}. Make sure the printer is on and in pairing mode.`);
+  } finally {
+    setConnecting(false);
+  }
+};
 
   const disconnect = async () => {
-    if (savedPrinter) {
-      try {
-        await savedPrinter.disconnect();
-      } catch {}
-      setSavedPrinter(null);
-      setConnected(false);
-    }
+    setPrinterMac(null);
   };
 
   return (
@@ -114,20 +108,20 @@ const submitManualMac = () => {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Printer Status</Text>
         <View style={styles.statusRow}>
-          <View style={[styles.dot, connected ? styles.dotGreen : styles.dotGrey]} />
-          <Text style={styles.statusText}>
-            {connected ? `Connected — ${savedPrinter?.address}` : 'No printer connected'}
+        <View style={[styles.dot, printerMac ? styles.dotGreen : styles.dotGrey]} />
+  <       Text style={styles.statusText}>
+            {printerMac ? `Saved — ${printerMac}` : 'No printer configured'}
           </Text>
         </View>
-        {connected && (
+        {printerMac && (
           <TouchableOpacity style={styles.disconnectBtn} onPress={disconnect}>
-            <Text style={styles.disconnectText}>Disconnect</Text>
+    <       Text style={styles.disconnectText}>Forget Printer</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Connect Options */}
-      {!connected && (
+      {!printerMac && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Connect Printer</Text>
           <Text style={styles.hint}>

@@ -43,12 +43,12 @@ export default function EditorScreen() {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
   const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('center');
   const [zplOutput, setZplOutput] = useState<string>('');
-  const {printer, isConnected} = usePrinter();
+  const {connectAndPrint, printerMac} = usePrinter();
 
 
   const printLabel = async () => {
-  if (!printer || !isConnected) {
-    Alert.alert('No Printer', 'Please connect to a printer first via the Printer Setup screen.');
+  if (!printerMac) {
+    Alert.alert('No Printer', 'Please configure a printer first via the Printer Setup screen.');
     return;
   }
   if (lines.length === 0) {
@@ -63,10 +63,10 @@ export default function EditorScreen() {
       orientation,
       verticalAlign,
     );
-    await printer.write(zpl);
-    Alert.alert('Success', 'Label sent to printer.');
+    await connectAndPrint(zpl);
+    Alert.alert('Success', 'Label printed successfully.');
   } catch {
-    Alert.alert('Print Failed', 'Could not send to printer. Check that it is still connected.');
+    Alert.alert('Print Failed', 'Could not connect to printer. Make sure it is powered on.');
   }
 };
 
@@ -295,7 +295,7 @@ export default function EditorScreen() {
     <Text style={styles.addButtonText}>Generate ZPL</Text>
   </TouchableOpacity>
   <TouchableOpacity
-    style={[styles.printButton, !isConnected && styles.printButtonDisabled]}
+    style={[styles.printButton, !printerMac && styles.printButtonDisabled]}
     onPress={printLabel}>
     <Text style={styles.addButtonText}>Print</Text>
   </TouchableOpacity>
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {color: '#dc2626', fontWeight: 'bold'},
   addButton: {
-    felx: 1,
+    flex: 1,
     backgroundColor: '#1a73e8',
     borderRadius: 8,
     padding: 16,

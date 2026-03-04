@@ -1,26 +1,64 @@
-import React, {createContext, useContext, useState} from 'react';
+import React, {createContext, useContext, useState, useEffect} from 'react';
 import {BluetoothDevice} from 'react-native-bluetooth-classic';
+import DefaultPreference from 'react-native-default-preference';
+import RNBluetoothClassic from 'react-native-bluetooth-classic';
 
 type PrinterContextType = {
-  printer: BluetoothDevice | null;
-  setPrinter: (device: BluetoothDevice | null) => void;
+  printerMac: string | null;
+  setPrinterMac: (mac: string | null) => void;
+  connectAndPrint: (zpl: string) => Promise<void>;
   isConnected: boolean;
-  setIsConnected: (connected: boolean) => void;
 };
 
 const PrinterContext = createContext<PrinterContextType>({
-  printer: null,
-  setPrinter: () => {},
+  printerMac: null,
+  setPrinterMac: () => {},
+  connectAndPrint: async () => {},
   isConnected: false,
-  setIsConnected: () => {},
 });
 
+const MAC_STORAGE_KEY = 'printer_mac';
+
 export function PrinterProvider({children}: {children: React.ReactNode}) {
-  const [printer, setPrinter] = useState<BluetoothDevice | null>(null);
+  const [printerMac, setPrinterMacState] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  useEffect(() => {
+    DefaultPreference.get(MAC_STORAGE_KEY).then((mac: string | null | undefined) => {
+      if (mac) setPrinterMacState(mac);
+    });
+  }, []);
+
+  const setPrinterMac = (mac: string | null) => {
+    setPrinterMacState(mac);
+    if (mac) {
+      DefaultPreference.set(MAC_STORAGE_KEY, mac);
+    } else {
+      DefaultPreference.clear(MAC_STORAGE_KEY);
+    }
+  };
+
+  const connectAndPrint = async (zpl: string) => {
+    if (!printerMac) throw new Error('No printer configured');
+    
+    let device: BluetoothDevice | null = null;
+    try {
+      setIsConnected(false);
+      device = await RNBluetoothClassic.connectToDevice(printerMac);
+      setIsConnected(true);
+      await device.write(zpl);
+    } finally {
+      if (device) {
+        try {
+          await device.disconnect();
+        } catch {}
+      }
+      setIsConnected(false);
+    }
+  };
+
   return (
-    <PrinterContext.Provider value={{printer, setPrinter, isConnected, setIsConnected}}>
+    <PrinterContext.Provider value={{printerMac, setPrinterMac, connectAndPrint, isConnected}}>
       {children}
     </PrinterContext.Provider>
   );
