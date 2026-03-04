@@ -1,5 +1,7 @@
 import React, {useState} from 'react';
 import {generateZPL} from '../utils/zplGenerator';
+import {usePrinter} from '../context/PrinterContext';
+
 import {
   View,
   Text,
@@ -7,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 
 type TextLine = {
@@ -30,7 +33,7 @@ type LabelSize = {
 };
 
 const LABEL_SIZES: LabelSize[] = [
-  {id: '1.5x2', label: 'Shelf Label', widthIn: 1.5, heightIn: 2},
+  {id: '2x1.25', label: 'Shelf Label', widthIn: 2, heightIn: 1.25},
   {id: '3x2', label: 'VizPick Label', widthIn: 3, heightIn: 2},
 ];
 
@@ -40,6 +43,32 @@ export default function EditorScreen() {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
   const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('center');
   const [zplOutput, setZplOutput] = useState<string>('');
+  const {printer, isConnected} = usePrinter();
+
+
+  const printLabel = async () => {
+  if (!printer || !isConnected) {
+    Alert.alert('No Printer', 'Please connect to a printer first via the Printer Setup screen.');
+    return;
+  }
+  if (lines.length === 0) {
+    Alert.alert('Empty Label', 'Please add at least one line before printing.');
+    return;
+  }
+  try {
+    const zpl = generateZPL(
+      lines,
+      selectedSize.widthIn,
+      selectedSize.heightIn,
+      orientation,
+      verticalAlign,
+    );
+    await printer.write(zpl);
+    Alert.alert('Success', 'Label sent to printer.');
+  } catch {
+    Alert.alert('Print Failed', 'Could not send to printer. Check that it is still connected.');
+  }
+};
 
   const addLine = () => {
     setLines(prev => [
@@ -265,6 +294,11 @@ export default function EditorScreen() {
   <TouchableOpacity style={styles.zplButton} onPress={previewZPL}>
     <Text style={styles.addButtonText}>Generate ZPL</Text>
   </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.printButton, !isConnected && styles.printButtonDisabled]}
+    onPress={printLabel}>
+    <Text style={styles.addButtonText}>Print</Text>
+  </TouchableOpacity>
 </View>
     </View>
   );
@@ -358,5 +392,15 @@ zplText: {
   fontFamily: 'monospace',
   fontSize: 11,
   color: '#333',
+},
+printButton: {
+  flex: 1,
+  backgroundColor: '#dc2626',
+  borderRadius: 8,
+  padding: 16,
+  alignItems: 'center',
+},
+printButtonDisabled: {
+  backgroundColor: '#ccc',
 },
 });

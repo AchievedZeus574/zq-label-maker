@@ -1,5 +1,8 @@
 import React, {useState, useEffect} from 'react';
+import {Modal, TextInput} from 'react-native';
 import BarcodeScanner from '../components/BarcodeScanner';
+import {usePrinter} from '../context/PrinterContext';
+
 import {
   View,
   Text,
@@ -23,10 +26,11 @@ const normalizeMac = (mac: string): string => {
 };
 
 export default function PrinterScreen() {
-  const [savedPrinter, setSavedPrinter] = useState<BluetoothDevice | null>(null);
+  const {printer: savedPrinter, setPrinter: setSavedPrinter, isConnected: connected, setIsConnected: setConnected} = usePrinter();
   const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [macModalVisible, setMacModalVisible] = useState(false);
+  const [macInput, setMacInput] = useState('');
 
   useEffect(() => {
     requestPermissions();
@@ -42,36 +46,41 @@ export default function PrinterScreen() {
     }
   };
 
-  const handleBarcodeScan = (value: string) => {
-  // Basic MAC address validation — must match XX:XX:XX:XX:XX:XX format
-  const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
-  if (!macRegex.test(value.trim())) {
+const handleBarcodeScan = (value: string) => {
+  const stripped = value.trim().replace(/[:-]/g, '');
+
+  // Must be exactly 12 hex characters
+  const hexRegex = /^[0-9A-Fa-f]{12}$/;
+  if (!hexRegex.test(stripped)) {
     Alert.alert(
       'Invalid Barcode',
-      'This doesn\'t look like a printer MAC address. Please scan the barcode on the bottom of the ZQ620.',
+      "This doesn't look like a printer MAC address. Please scan the barcode on the bottom of the ZQ620.",
     );
     return;
   }
+
+  // Format into XX:XX:XX:XX:XX:XX
+  const mac = stripped.match(/.{2}/g)!.join(':');
   setScanning(false);
-  connectToMac(value.trim());
+  connectToMac(mac);
 };
   
   const handleManualMac = () => {
-    Alert.prompt(
-      'Enter MAC Address',
-      'Enter the MAC address from the label on the bottom of the printer.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Connect',
-          onPress: (mac: string | undefined) => {
-        if (mac) connectToMac(mac.trim());
-        },
-        },
-      ],
-      'plain-text',
-    );
-  };
+  setMacInput('');
+  setMacModalVisible(true);
+};
+
+const submitManualMac = () => {
+  const stripped = macInput.trim().replace(/[:-]/g, '');
+  const hexRegex = /^[0-9A-Fa-f]{12}$/;
+  if (!hexRegex.test(stripped)) {
+    Alert.alert('Invalid MAC', 'Please enter a valid 12 character MAC address.');
+    return;
+  }
+  const mac = stripped.match(/.{2}/g)!.join(':');
+  setMacModalVisible(false);
+  connectToMac(mac);
+};
 
   const connectToMac = async (rawMac: string) => {
     const mac = normalizeMac(rawMac);
@@ -126,7 +135,7 @@ export default function PrinterScreen() {
           </Text>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={() => setScanning(true)}>
-            <Text style={styles.primaryBtnText}>📷  Scan Barcode</Text>
+            <Text style={styles.primaryBtnText}>  Scan Barcode</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryBtn} onPress={handleManualMac}>
@@ -142,6 +151,39 @@ export default function PrinterScreen() {
           onCancel={() => setScanning(false)}
         />
       )}
+      <Modal
+  visible={macModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setMacModalVisible(false)}>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalCard}>
+      <Text style={styles.sectionTitle}>Enter MAC Address</Text>
+      <Text style={styles.hint}>
+        Enter the MAC address from the label on the bottom of the printer. Separators are optional.
+      </Text>
+      <TextInput
+        style={styles.macInput}
+        value={macInput}
+        onChangeText={setMacInput}
+        placeholder="e.g. 48A49382A2EC"
+        placeholderTextColor="#999"
+        autoCapitalize="characters"
+        maxLength={17}
+      />
+      <View style={styles.modalButtons}>
+        <TouchableOpacity
+          style={styles.modalSecondaryBtn}
+          onPress={() => setMacModalVisible(false)}>
+          <Text style={styles.secondaryBtnText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.modalPrimaryBtn} onPress={submitManualMac}>
+          <Text style={styles.primaryBtnText}>Connect</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -163,20 +205,37 @@ const styles = StyleSheet.create({
   statusText: {fontSize: 14, color: '#333'},
   hint: {fontSize: 13, color: '#888', lineHeight: 20},
   primaryBtn: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-  },
+  backgroundColor: '#1a73e8',
+  borderRadius: 8,
+  padding: 14,
+  alignItems: 'center',
+},
+secondaryBtn: {
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  padding: 14,
+  alignItems: 'center',
+},
+modalPrimaryBtn: {
+  flex: 1,
+  backgroundColor: '#1a73e8',
+  borderRadius: 8,
+  padding: 14,
+  alignItems: 'center',
+},
+modalSecondaryBtn: {
+  flex: 1,
+  borderWidth: 1,
+  borderColor: '#ccc',
+  borderRadius: 8,
+  padding: 14,
+  alignItems: 'center',
+},
+
   primaryBtnText: {color: '#fff', fontSize: 15, fontWeight: '600'},
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-  },
   secondaryBtnText: {color: '#444', fontSize: 15},
+
   disconnectBtn: {
     borderWidth: 1,
     borderColor: '#dc2626',
@@ -185,4 +244,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   disconnectText: {color: '#dc2626', fontSize: 14},
+  modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 24,
+},
+modalCard: {
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 20,
+  width: '100%',
+  gap: 12,
+},
+macInput: {
+  borderWidth: 1,
+  borderColor: '#ddd',
+  borderRadius: 8,
+  padding: 10,
+  fontSize: 16,
+  color: '#333',
+  fontFamily: 'monospace',
+},
+modalButtons: {
+  flexDirection: 'row',
+  gap: 8,
+},
 });

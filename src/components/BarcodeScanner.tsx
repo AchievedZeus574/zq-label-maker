@@ -12,7 +12,10 @@ export default function BarcodeScanner({onScan, onCancel}: Props) {
 
   const handleBarcode = (event: any) => {
     const value = event.nativeEvent.codeStringValue;
+    const type = event.nativeEvent.codeFormat;
     if (!value || value === lastScan.current) return;
+    // Only accept Code 128
+    if (type !== 'code-128') return;
     lastScan.current = value;
     onScan(value);
   };
