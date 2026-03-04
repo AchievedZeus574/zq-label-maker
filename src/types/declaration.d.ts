@@ -1,8 +1,8 @@
-declare module '@react-native-async-storage/async-storage' {
-  const AsyncStorage: {
-    getItem(key: string): Promise<string | null>;
-    setItem(key: string, value: string): Promise<void>;
-    removeItem(key: string): Promise<void>;
+declare module 'react-native-default-preference' {
+  const DefaultPreference: {
+    get(key: string): Promise<string | null | undefined>;
+    set(key: string, value: string): Promise<void>;
+    clear(key: string): Promise<void>;
   };
-  export default AsyncStorage;
+  export default DefaultPreference;
 }
