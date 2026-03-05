@@ -1,97 +1,117 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# ZQ Label Maker
 
-# Getting Started
+An unofficial Android app for creating and printing labels on Zebra ZQ620 Bluetooth printers. Designed as an internal productivity tool to replace handwritten labels with consistent, template-based printed labels.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> **Disclaimer:** This app is not affiliated with, endorsed by, or officially supported by Zebra Technologies Corporation. ZPL and ZPL II are registered trademarks of Zebra Technologies Corporation.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- Create multi-line text labels with configurable font size, alignment, and bold
+- Supports multiple label sizes: Shelf Label (2×1.25"), VizPick Label (3×2"), Fact Tag (4×3"), and 1×1 Label (1.25×1")
+- Portrait and landscape orientation with top, center, and bottom vertical alignment
+- Live label preview before printing
+- Multi-label print jobs — queue multiple labels with individual copy counts in a single job
+- Bluetooth pairing and connection via barcode scan or manual MAC entry
+- Auto-pairs printer if not already paired at OS level
+- Connects on demand and disconnects after printing to preserve battery
+- Remembers your printer across app restarts
+- Dark mode support following system theme
 
-```sh
-# Using npm
-npm start
+---
 
-# OR using Yarn
-yarn start
+## Supported Hardware
+
+- **Printer:** Zebra ZQ620 (203 DPI)
+- **Media:** Non-continuous black mark labels
+- **Connection:** Bluetooth Classic (SPP)
+
+Other Zebra printers using ZPL over Bluetooth Classic may work but are untested.
+
+---
+
+## Installation
+
+Download the latest APK from the [Releases](../../releases) page and install it on your Android device. You may need to enable **Install from unknown sources** in your device settings.
+
+Minimum Android version: **Android 8.0 (API 26)**
+
+---
+
+## Building from Source
+
+### Prerequisites
+
+- Node.js 18+ (via nvm recommended)
+- Android Studio with Android SDK
+- Java 17 (Android Studio JBR works)
+- A connected Android device or emulator with USB debugging enabled
+
+### Setup
+
+```bash
+git clone <repo-url>
+cd ZQLabelMaker
+npm install
 ```
 
-## Step 2: Build and run your app
+### Debug Build
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```bash
+npx react-native run-android
 ```
 
-### iOS
+### Release Build
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+1. Create a keystore if you don't have one:
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore release.keystore -alias zqlabelmaker -keyalg RSA -keysize 2048 -validity 10000
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
+2. Create `android/keystore.properties`:
+```
+storePassword=yourpassword
+keyPassword=yourpassword
+keyAlias=zqlabelmaker
+storeFile=/path/to/release.keystore
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+3. Build the APK:
+```bash
+cd android && ./gradlew assembleRelease
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+The APK will be at `android/app/build/outputs/apk/release/app-release.apk`.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+---
 
-## Step 3: Modify your app
+## ZPL Notes
 
-Now that you have successfully run the app, let's make changes!
+Labels are generated using ZPL II and sent directly to the printer over Bluetooth. The generated ZPL assumes:
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+- 203 DPI print density
+- Non-continuous media with black mark sensing (`^MNA`)
+- Printer loaded in inverted orientation (`^POI`)
+- Single label or copy count per job (`^PQ`)
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+You can preview generated ZPL at [Labelary Online ZPL Viewer](http://labelary.com/viewer.html).
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+---
 
-## Congratulations! :tada:
+## Project Structure
 
-You've successfully run and modified your React Native App. :partying_face:
+```
+src/
+  components/     # Reusable UI components (BarcodeScanner)
+  context/        # App-wide state (PrinterContext, ThemeContext)
+  screens/        # Full screens (EditorScreen, PrinterScreen)
+  types/          # TypeScript declarations
+  utils/          # Pure logic (zplGenerator, theme)
+```
 
-### Now what?
+---
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## License
 
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+MIT License — see [LICENSE](LICENSE) for details.
