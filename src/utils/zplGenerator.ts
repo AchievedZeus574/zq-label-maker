@@ -19,6 +19,7 @@ export function generateZPL(
   heightIn: number,
   orientation: Orientation,
   verticalAlign: VerticalAlign,
+  copies: number = 1,
 ): string {
   // Printer physically feeds in landscape, so always swap width/height
   const labelWidthDots = inchesToDots(widthIn);
@@ -66,7 +67,7 @@ export function generateZPL(
   zpl += '^XA\n';
   zpl += '^POI\n';   // Compensate for inverted printer loading
   zpl += '^MNA\n';   // Auto-detect media type
-  zpl += '^PQ1\n';   // Print exactly 1 label
+  zpl += `^PQ${copies}\n`;   // Print exactly `copies` labels
   zpl += '^LH0,0\n';
   zpl += `^PW${labelWidthDots}\n`;
   zpl += `^LL${labelHeightDots}\n`;
