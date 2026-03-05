@@ -35,6 +35,8 @@ type LabelSize = {
 const LABEL_SIZES: LabelSize[] = [
   {id: '2x1.25', label: 'Shelf Label', widthIn: 2, heightIn: 1.25},
   {id: '3x2', label: 'VizPick Label', widthIn: 3, heightIn: 2},
+  {id: '4x3', label: 'Fact Tag', widthIn: 4, heightIn: 3},
+  {id: '1.25x1', label: '1x1 Label', widthIn: 1.25, heightIn: 1},
 ];
 
 export default function EditorScreen() {
@@ -42,9 +44,10 @@ export default function EditorScreen() {
   const [lines, setLines] = useState<TextLine[]>([]);
   const [selectedSize, setSelectedSize] = useState<LabelSize>(LABEL_SIZES[0]);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
-  const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('center');
+  const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('top');
   const [zplOutput, setZplOutput] = useState<string>('');
   const {connectAndPrint, printerMac} = usePrinter();
+  const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
 
   const printLabel = async () => {
     if (!printerMac) {
@@ -100,18 +103,29 @@ export default function EditorScreen() {
           <Text style={s.sectionTitle}>Label Settings</Text>
 
           <Text style={s.label}>Size</Text>
-          <View style={s.row}>
-            {LABEL_SIZES.map(size => (
-              <TouchableOpacity
-                key={size.id}
-                style={[s.chip, selectedSize.id === size.id && s.chipActive]}
-                onPress={() => setSelectedSize(size)}>
-                <Text style={[s.chipText, selectedSize.id === size.id && s.chipTextActive]}>
-                  {size.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={s.dropdownBtn}
+            onPress={() => setSizeDropdownOpen(prev => !prev)}>
+            <Text style={s.dropdownBtnText}>{selectedSize.label}</Text>
+            <Text style={s.dropdownArrow}>{sizeDropdownOpen ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {sizeDropdownOpen && (
+            <View style={s.dropdownList}>
+              {LABEL_SIZES.map(size => (
+                <TouchableOpacity
+                  key={size.id}
+                  style={[s.dropdownItem, selectedSize.id === size.id && s.dropdownItemActive]}
+                  onPress={() => {
+                    setSelectedSize(size);
+                    setSizeDropdownOpen(false);
+                  }}>
+                  <Text style={[s.dropdownItemText, selectedSize.id === size.id && s.dropdownItemTextActive]}>
+                    {size.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <Text style={s.label}>Orientation</Text>
           <View style={s.row}>
@@ -315,4 +329,31 @@ const makeStyles = (theme: ReturnType<typeof import('../context/ThemeContext').u
   printButtonDisabled: {backgroundColor: theme.disabled},
   buttonText: {color: '#fff', fontSize: 16, fontWeight: 'bold'},
   zplText: {fontFamily: 'monospace', fontSize: 11, color: theme.text},
+dropdownBtn: {
+  flexDirection: 'row' as const,
+  justifyContent: 'space-between' as const,
+  alignItems: 'center' as const,
+  borderWidth: 1,
+  borderColor: theme.border,
+  borderRadius: 8,
+  padding: 10,
+  backgroundColor: theme.card,
+},
+dropdownBtnText: {color: theme.text, fontSize: 14},
+dropdownArrow: {color: theme.subtext, fontSize: 12},
+dropdownList: {
+  borderWidth: 1,
+  borderColor: theme.border,
+  borderRadius: 8,
+  overflow: 'hidden' as const,
+  backgroundColor: theme.card,
+},
+dropdownItem: {
+  padding: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: theme.border,
+},
+dropdownItemActive: {backgroundColor: theme.primary},
+dropdownItemText: {color: theme.text, fontSize: 14},
+dropdownItemTextActive: {color: '#fff'},
 });
