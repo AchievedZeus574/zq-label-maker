@@ -69,6 +69,15 @@ export default function PrinterScreen() {
     const mac = normalizeMac(rawMac);
     setConnecting(true);
     try {
+      // Check if already paired
+      const paired = await RNBluetoothClassic.getBondedDevices();
+      const alreadyPaired = paired.some(d => d.address.toUpperCase() === mac.toUpperCase());
+
+      if (!alreadyPaired) {
+        Toast.show({type: 'info', text1: 'Pairing', text2: 'Please confirm the pairing request on your device.'});
+        await RNBluetoothClassic.pairDevice(mac);
+      }
+
       const device = await RNBluetoothClassic.connectToDevice(mac);
       await device.disconnect();
       setPrinterMac(mac);
