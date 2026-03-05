@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {generateZPL} from '../utils/zplGenerator';
 import {usePrinter} from '../context/PrinterContext';
+import {useTheme} from '../context/ThemeContext';
 
 import {
   View,
@@ -22,7 +23,6 @@ type TextLine = {
 
 const FONT_SIZES = ['small', 'medium', 'large'] as const;
 const ALIGNMENTS = ['left', 'center', 'right'] as const;
-
 const fontSizeMap = {small: 14, medium: 20, large: 28};
 
 type LabelSize = {
@@ -38,6 +38,7 @@ const LABEL_SIZES: LabelSize[] = [
 ];
 
 export default function EditorScreen() {
+  const theme = useTheme();
   const [lines, setLines] = useState<TextLine[]>([]);
   const [selectedSize, setSelectedSize] = useState<LabelSize>(LABEL_SIZES[0]);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
@@ -45,48 +46,30 @@ export default function EditorScreen() {
   const [zplOutput, setZplOutput] = useState<string>('');
   const {connectAndPrint, printerMac} = usePrinter();
 
-
   const printLabel = async () => {
-  if (!printerMac) {
-    Alert.alert('No Printer', 'Please configure a printer first via the Printer Setup screen.');
-    return;
-  }
-  if (lines.length === 0) {
-    Alert.alert('Empty Label', 'Please add at least one line before printing.');
-    return;
-  }
-  try {
-    const zpl = generateZPL(
-      lines,
-      selectedSize.widthIn,
-      selectedSize.heightIn,
-      orientation,
-      verticalAlign,
-    );
-    await connectAndPrint(zpl);
-    Alert.alert('Success', 'Label printed successfully.');
-  } catch {
-    Alert.alert('Print Failed', 'Could not connect to printer. Make sure it is powered on.');
-  }
-};
+    if (!printerMac) {
+      Alert.alert('No Printer', 'Please configure a printer first via the Printer Setup screen.');
+      return;
+    }
+    if (lines.length === 0) {
+      Alert.alert('Empty Label', 'Please add at least one line before printing.');
+      return;
+    }
+    try {
+      const zpl = generateZPL(lines, selectedSize.widthIn, selectedSize.heightIn, orientation, verticalAlign);
+      await connectAndPrint(zpl);
+      Alert.alert('Success', 'Label printed successfully.');
+    } catch {
+      Alert.alert('Print Failed', 'Could not connect to printer. Make sure it is powered on.');
+    }
+  };
 
   const addLine = () => {
-    setLines(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        content: '',
-        fontSize: 'large',
-        align: 'left',
-        bold: false,
-      },
-    ]);
+    setLines(prev => [...prev, {id: Date.now().toString(), content: '', fontSize: 'large', align: 'left', bold: false}]);
   };
 
   const updateLine = (id: string, changes: Partial<TextLine>) => {
-    setLines(prev =>
-      prev.map(line => (line.id === id ? {...line, ...changes} : line)),
-    );
+    setLines(prev => prev.map(line => (line.id === id ? {...line, ...changes} : line)));
   };
 
   const deleteLine = (id: string) => {
@@ -102,305 +85,234 @@ export default function EditorScreen() {
   };
 
   const previewZPL = () => {
-  const zpl = generateZPL(
-    lines,
-    selectedSize.widthIn,
-    selectedSize.heightIn,
-    orientation,
-    verticalAlign,
-  );
+    const zpl = generateZPL(lines, selectedSize.widthIn, selectedSize.heightIn, orientation, verticalAlign);
     setZplOutput(zpl);
   };
 
+  const s = makeStyles(theme);
+
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* Label Size Selector */}
-{/* Label Settings */}
-<View style={styles.sizeSelector}>
-  <Text style={styles.sectionTitle}>Label Settings</Text>
-  
-  <Text style={styles.label}>Size</Text>
-  <View style={styles.row}>
-    {LABEL_SIZES.map(size => (
-      <TouchableOpacity
-        key={size.id}
-        style={[styles.chip, selectedSize.id === size.id && styles.chipActive]}
-        onPress={() => setSelectedSize(size)}>
-        <Text style={[styles.chipText, selectedSize.id === size.id && styles.chipTextActive]}>
-          {size.label}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </View>
+    <View style={s.container}>
+      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
 
-  <Text style={styles.label}>Orientation</Text>
-  <View style={styles.row}>
-    {(['landscape', 'portrait'] as const).map(o => (
-      <TouchableOpacity
-        key={o}
-        style={[styles.chip, orientation === o && styles.chipActive]}
-        onPress={() => setOrientation(o)}>
-        <Text style={[styles.chipText, orientation === o && styles.chipTextActive]}>
-          {o.charAt(0).toUpperCase() + o.slice(1)}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </View>
+        {/* Label Settings */}
+        <View style={s.card}>
+          <Text style={s.sectionTitle}>Label Settings</Text>
 
-  <Text style={styles.label}>Vertical Alignment</Text>
-  <View style={styles.row}>
-    {(['top', 'center', 'bottom'] as const).map(v => (
-      <TouchableOpacity
-        key={v}
-        style={[styles.chip, verticalAlign === v && styles.chipActive]}
-        onPress={() => setVerticalAlign(v)}>
-        <Text style={[styles.chipText, verticalAlign === v && styles.chipTextActive]}>
-          {v.charAt(0).toUpperCase() + v.slice(1)}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-</View>
+          <Text style={s.label}>Size</Text>
+          <View style={s.row}>
+            {LABEL_SIZES.map(size => (
+              <TouchableOpacity
+                key={size.id}
+                style={[s.chip, selectedSize.id === size.id && s.chipActive]}
+                onPress={() => setSelectedSize(size)}>
+                <Text style={[s.chipText, selectedSize.id === size.id && s.chipTextActive]}>
+                  {size.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={s.label}>Orientation</Text>
+          <View style={s.row}>
+            {(['landscape', 'portrait'] as const).map(o => (
+              <TouchableOpacity
+                key={o}
+                style={[s.chip, orientation === o && s.chipActive]}
+                onPress={() => setOrientation(o)}>
+                <Text style={[s.chipText, orientation === o && s.chipTextActive]}>
+                  {o.charAt(0).toUpperCase() + o.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={s.label}>Vertical Alignment</Text>
+          <View style={s.row}>
+            {(['top', 'center', 'bottom'] as const).map(v => (
+              <TouchableOpacity
+                key={v}
+                style={[s.chip, verticalAlign === v && s.chipActive]}
+                onPress={() => setVerticalAlign(v)}>
+                <Text style={[s.chipText, verticalAlign === v && s.chipTextActive]}>
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {lines.length === 0 && (
-          <Text style={styles.emptyText}>No lines yet. Tap + Add Line to begin.</Text>
+          <Text style={s.emptyText}>No lines yet. Tap + Add Line to begin.</Text>
         )}
 
         {lines.map((line, index) => (
-          <View key={line.id} style={styles.lineCard}>
-
-            {/* Text Input */}
+          <View key={line.id} style={s.card}>
             <TextInput
-              style={styles.textInput}
+              style={s.textInput}
               value={line.content}
               onChangeText={text => updateLine(line.id, {content: text})}
               placeholder="Enter text..."
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.placeholder}
             />
 
-            {/* Font Size */}
-            <View style={styles.row}>
-              <Text style={styles.label}>Size:</Text>
+            <View style={s.row}>
+              <Text style={s.label}>Size:</Text>
               {FONT_SIZES.map(size => (
                 <TouchableOpacity
                   key={size}
-                  style={[styles.chip, line.fontSize === size && styles.chipActive]}
+                  style={[s.chip, line.fontSize === size && s.chipActive]}
                   onPress={() => updateLine(line.id, {fontSize: size})}>
-                  <Text style={[styles.chipText, line.fontSize === size && styles.chipTextActive]}>
+                  <Text style={[s.chipText, line.fontSize === size && s.chipTextActive]}>
                     {size}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {/* Alignment */}
-            <View style={styles.row}>
-              <Text style={styles.label}>Align:</Text>
+            <View style={s.row}>
+              <Text style={s.label}>Align:</Text>
               {ALIGNMENTS.map(align => (
                 <TouchableOpacity
                   key={align}
-                  style={[styles.chip, line.align === align && styles.chipActive]}
+                  style={[s.chip, line.align === align && s.chipActive]}
                   onPress={() => updateLine(line.id, {align})}>
-                  <Text style={[styles.chipText, line.align === align && styles.chipTextActive]}>
+                  <Text style={[s.chipText, line.align === align && s.chipTextActive]}>
                     {align}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            {/* Bold + Move + Delete */}
-            <View style={styles.row}>
+            <View style={s.row}>
               <TouchableOpacity
-                style={[styles.chip, line.bold && styles.chipActive]}
+                style={[s.chip, line.bold && s.chipActive]}
                 onPress={() => updateLine(line.id, {bold: !line.bold})}>
-                <Text style={[styles.chipText, line.bold && styles.chipTextActive]}>Bold</Text>
+                <Text style={[s.chipText, line.bold && s.chipTextActive]}>Bold</Text>
               </TouchableOpacity>
-              <View style={styles.spacer} />
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => moveLine(index, 'up')}
-                disabled={index === 0}>
-                <Text style={[styles.iconText, index === 0 && styles.disabled]}>▲</Text>
+              <View style={s.spacer} />
+              <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'up')} disabled={index === 0}>
+                <Text style={[s.iconText, index === 0 && s.dimmed]}>▲</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => moveLine(index, 'down')}
-                disabled={index === lines.length - 1}>
-                <Text style={[styles.iconText, index === lines.length - 1 && styles.disabled]}>▼</Text>
+              <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'down')} disabled={index === lines.length - 1}>
+                <Text style={[s.iconText, index === lines.length - 1 && s.dimmed]}>▼</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={() => deleteLine(line.id)}>
-                <Text style={styles.deleteBtnText}>✕</Text>
+              <TouchableOpacity style={s.deleteBtn} onPress={() => deleteLine(line.id)}>
+                <Text style={s.deleteBtnText}>✕</Text>
               </TouchableOpacity>
             </View>
-
           </View>
         ))}
+
         {/* Preview */}
-{lines.length > 0 && (
-  <View style={styles.sizeSelector}>
-    <Text style={styles.sectionTitle}>Preview</Text>
-    <View
-  style={[
-    styles.previewBox,
-    // eslint-disable-next-line react-native/no-inline-styles
-    {
-      aspectRatio:
-        orientation === 'landscape'
-          ? selectedSize.widthIn / selectedSize.heightIn
-          : selectedSize.heightIn / selectedSize.widthIn,
-      justifyContent:
-        verticalAlign === 'top'
-          ? 'flex-start'
-          : verticalAlign === 'bottom'
-          ? 'flex-end'
-          : 'space-evenly',
-    },
-  ]}>
-      {lines.map(line => (
-        <Text
-          key={line.id}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          style={[
-            styles.previewText,
-            // eslint-disable-next-line react-native/no-inline-styles
-            {
-              fontSize: fontSizeMap[line.fontSize],
-              textAlign: line.align,
-              fontWeight: line.bold ? 'bold' : 'normal',
-            },
-          ]}>
-          {line.content || ' '}
-        </Text>
-      ))}
-    </View>
-  </View>
-)}
-{/* ZPL Output */}
-{zplOutput !== '' && (
-  <View style={styles.sizeSelector}>
-    <Text style={styles.sectionTitle}>ZPL Output</Text>
-    <Text selectable style={styles.zplText}>{zplOutput}</Text>
-  </View>
-)}
+        {lines.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Preview</Text>
+            <View
+              style={[
+                s.previewBox,
+                // eslint-disable-next-line react-native/no-inline-styles
+                {
+                  aspectRatio: orientation === 'landscape'
+                    ? selectedSize.widthIn / selectedSize.heightIn
+                    : selectedSize.heightIn / selectedSize.widthIn,
+                  justifyContent: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'space-evenly',
+                },
+              ]}>
+              {lines.map(line => (
+                <Text
+                  key={line.id}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  // eslint-disable-next-line react-native/no-inline-styles
+                  style={{
+                    width: '100%',
+                    color: theme.text,
+                    fontSize: fontSizeMap[line.fontSize],
+                    textAlign: line.align,
+                    fontWeight: line.bold ? 'bold' : 'normal',
+                  }}>
+                  {line.content || ' '}
+                </Text>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ZPL Output */}
+        {zplOutput !== '' && (
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>ZPL Output</Text>
+            <Text selectable style={s.zplText}>{zplOutput}</Text>
+          </View>
+        )}
+
       </ScrollView>
 
-<View style={styles.buttonRow}>
-  <TouchableOpacity style={styles.addButton} onPress={addLine}>
-    <Text style={styles.addButtonText}>+ Add Line</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.zplButton} onPress={previewZPL}>
-    <Text style={styles.addButtonText}>Generate ZPL</Text>
-  </TouchableOpacity>
-  <TouchableOpacity
-    style={[styles.printButton, !printerMac && styles.printButtonDisabled]}
-    onPress={printLabel}>
-    <Text style={styles.addButtonText}>Print</Text>
-  </TouchableOpacity>
-</View>
+      <View style={s.buttonRow}>
+        <TouchableOpacity style={s.addButton} onPress={addLine}>
+          <Text style={s.buttonText}>+ Add Line</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.zplButton} onPress={previewZPL}>
+          <Text style={s.buttonText}>Generate ZPL</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.printButton, !printerMac && s.printButtonDisabled]}
+          onPress={printLabel}>
+          <Text style={s.buttonText}>Print</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#f5f5f5'},
+const makeStyles = (theme: ReturnType<typeof import('../context/ThemeContext').useTheme>) => StyleSheet.create({
+  container: {flex: 1, backgroundColor: theme.background},
   scroll: {flex: 1},
   scrollContent: {padding: 16, gap: 12},
-  emptyText: {textAlign: 'center', color: '#999', marginTop: 40, fontSize: 16},
-  lineCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    gap: 10,
-    elevation: 2,
-  },
+  emptyText: {textAlign: 'center', color: theme.subtext, marginTop: 40, fontSize: 16},
+  card: {backgroundColor: theme.card, borderRadius: 8, padding: 12, gap: 10, elevation: 2},
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
+    backgroundColor: theme.card,
   },
   row: {flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap'},
-  label: {fontSize: 13, color: '#666', marginRight: 4},
+  label: {fontSize: 13, color: theme.subtext, marginRight: 4},
+  sectionTitle: {fontSize: 13, color: theme.subtext, fontWeight: '600'},
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
+    borderColor: theme.chipBorder,
+    backgroundColor: theme.chipBg,
   },
-  chipActive: {backgroundColor: '#1a73e8', borderColor: '#1a73e8'},
-  chipText: {fontSize: 13, color: '#444'},
+  chipActive: {backgroundColor: theme.primary, borderColor: theme.primary},
+  chipText: {fontSize: 13, color: theme.chipText},
   chipTextActive: {color: '#fff'},
   spacer: {flex: 1},
   iconBtn: {padding: 6},
-  iconText: {fontSize: 18, color: '#555'},
-  disabled: {color: '#ccc'},
-  deleteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#fee2e2',
+  iconText: {fontSize: 18, color: theme.text},
+  dimmed: {color: theme.disabled},
+  deleteBtn: {paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: theme.dangerBg},
+  deleteBtnText: {color: theme.danger, fontWeight: 'bold'},
+  previewBox: {
+    width: '100%',
+    backgroundColor: theme.previewBg,
+    borderWidth: 1,
+    borderColor: theme.previewBorder,
+    padding: 8,
   },
-  deleteBtnText: {color: '#dc2626', fontWeight: 'bold'},
-  addButton: {
-    flex: 1,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addButtonText: {color: '#fff', fontSize: 16, fontWeight: 'bold'},
-  sizeSelector: {
-  backgroundColor: '#fff',
-  borderRadius: 8,
-  padding: 12,
-  gap: 8,
-  elevation: 2,
-  marginBottom: 4,
-},
-sectionTitle: {fontSize: 13, color: '#666', fontWeight: '600'},
-previewBox: {
-  width: '100%',
-  backgroundColor: '#fff',
-  borderWidth: 1,
-  borderColor: '#333',
-  padding: 8,
-},
-previewText: {
-  width: '100%',
-  color: '#000',
-},
-buttonRow: {
-  flexDirection: 'row',
-  gap: 8,
-  margin: 16,
-},
-zplButton: {
-  flex: 1,
-  backgroundColor: '#16a34a',
-  borderRadius: 8,
-  padding: 16,
-  alignItems: 'center',
-},
-zplText: {
-  fontFamily: 'monospace',
-  fontSize: 11,
-  color: '#333',
-},
-printButton: {
-  flex: 1,
-  backgroundColor: '#dc2626',
-  borderRadius: 8,
-  padding: 16,
-  alignItems: 'center',
-},
-printButtonDisabled: {
-  backgroundColor: '#ccc',
-},
+  buttonRow: {flexDirection: 'row', gap: 8, margin: 16},
+  addButton: {flex: 1, backgroundColor: theme.primary, borderRadius: 8, padding: 16, alignItems: 'center'},
+  zplButton: {flex: 1, backgroundColor: theme.success, borderRadius: 8, padding: 16, alignItems: 'center'},
+  printButton: {flex: 1, backgroundColor: theme.danger, borderRadius: 8, padding: 16, alignItems: 'center'},
+  printButtonDisabled: {backgroundColor: theme.disabled},
+  buttonText: {color: '#fff', fontSize: 16, fontWeight: 'bold'},
+  zplText: {fontFamily: 'monospace', fontSize: 11, color: theme.text},
 });
