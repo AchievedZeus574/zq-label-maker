@@ -81,6 +81,12 @@ export function generateZPL(
       zpl += `^A0N,${fontHeight},${fontWidth}\n`;
       zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
       zpl += `^FD${line.content}^FS\n`;
+      if (line.bold) {
+        zpl += `^FO${currentX + 1},${currentY}\n`
+        zpl += `^A0N,${fontHeight},${fontWidth}\n`;
+        zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
+        zpl += `^FD${line.content}^FS\n`;
+      }
       currentY += fontHeight + lineGap;
     } else {
       const portraitX =
@@ -93,6 +99,12 @@ export function generateZPL(
       zpl += `^A0R,${fontHeight},${fontWidth}\n`;
       zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
       zpl += `^FD${line.content}^FS\n`;
+      if (line.bold) {
+        zpl += `^FO${portraitX},${paddingDots + 1}\n`;
+        zpl += `^A0R,${fontHeight},${fontWidth}\n`;
+        zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
+        zpl += `^FD${line.content}^FS\n`;
+      }
     }
   });
 
