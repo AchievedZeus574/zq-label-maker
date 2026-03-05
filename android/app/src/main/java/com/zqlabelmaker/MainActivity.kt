@@ -1,4 +1,4 @@
-package com.zebragen
+package com.zqlabelmaker
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

@@ -1,4 +1,4 @@
-package com.zebragen
+package com.zqlabelmaker
 
 import android.app.Application
 import com.facebook.react.PackageList
