@@ -5,6 +5,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createDrawerNavigator, DrawerContentScrollView, DrawerItemList} from '@react-navigation/drawer';
 import {usePrinter, PrinterProvider} from './src/context/PrinterContext';
 import {ThemeProvider, useTheme} from './src/context/ThemeContext';
+import Toast from 'react-native-toast-message';
 import EditorScreen from './src/screens/EditorScreen';
 import PrinterScreen from './src/screens/PrinterScreen';
 
@@ -87,6 +88,7 @@ export default function App() {
     <ThemeProvider>
       <PrinterProvider>
         <AppNavigator />
+        <Toast />
       </PrinterProvider>
     </ThemeProvider>
   );

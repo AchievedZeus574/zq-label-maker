@@ -1,9 +1,10 @@
 import React, {useState, useEffect} from 'react';
-import {Modal, TextInput, View, Text, TouchableOpacity, Alert, PermissionsAndroid, Platform} from 'react-native';
+import {Modal, TextInput, View, Text, TouchableOpacity, PermissionsAndroid, Platform} from 'react-native';
 import BarcodeScanner from '../components/BarcodeScanner';
 import {usePrinter} from '../context/PrinterContext';
 import {useTheme} from '../context/ThemeContext';
 import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import Toast from 'react-native-toast-message';
 
 const normalizeMac = (mac: string): string => {
   const parts = mac.toUpperCase().split(':');
@@ -39,7 +40,7 @@ export default function PrinterScreen() {
     const stripped = value.trim().replace(/[:-]/g, '');
     const hexRegex = /^[0-9A-Fa-f]{12}$/;
     if (!hexRegex.test(stripped)) {
-      Alert.alert('Invalid Barcode', "This doesn't look like a printer MAC address. Please scan the barcode on the bottom of the ZQ620.");
+      Toast.show({type: 'error', text1: 'Invalid Barcode', text2: "This doesn't look like a printer MAC address. Please scan the barcode on the bottom of the ZQ620."});
       return;
     }
     const mac = stripped.match(/.{2}/g)!.join(':');
@@ -56,7 +57,7 @@ export default function PrinterScreen() {
     const stripped = macInput.trim().replace(/[:-]/g, '');
     const hexRegex = /^[0-9A-Fa-f]{12}$/;
     if (!hexRegex.test(stripped)) {
-      Alert.alert('Invalid MAC', 'Please enter a valid 12 character MAC address.');
+      Toast.show({type: 'error', text1: 'Invalid MAC', text2: 'Please enter a valid 12 character MAC address.'});
       return;
     }
     const mac = stripped.match(/.{2}/g)!.join(':');
@@ -71,9 +72,9 @@ export default function PrinterScreen() {
       const device = await RNBluetoothClassic.connectToDevice(mac);
       await device.disconnect();
       setPrinterMac(mac);
-      Alert.alert('Printer Saved', `Printer ${mac} has been saved successfully.`);
+      Toast.show({type: 'success', text1: 'Printer Saved', text2: mac});
     } catch {
-      Alert.alert('Connection Failed', `Could not connect to ${mac}. Make sure the printer is on and in pairing mode.`);
+      Toast.show({type: 'error', text1: 'Connection Failed', text2: `Could not connect to ${mac}. Make sure the printer is on and in pairing mode.`});
     } finally {
       setConnecting(false);
     }

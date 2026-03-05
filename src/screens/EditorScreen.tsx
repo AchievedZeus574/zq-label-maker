@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {generateZPL} from '../utils/zplGenerator';
 import {usePrinter} from '../context/PrinterContext';
 import {useTheme} from '../context/ThemeContext';
+import Toast from 'react-native-toast-message';
 
 import {
   View,
@@ -10,7 +11,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 type TextLine = {
@@ -51,19 +53,19 @@ export default function EditorScreen() {
 
   const printLabel = async () => {
     if (!printerMac) {
-      Alert.alert('No Printer', 'Please configure a printer first via the Printer Setup screen.');
+      Toast.show({type: 'error', text1: 'No Printer', text2: 'Please configure a printer first via the Printer Setup screen.'});
       return;
     }
     if (lines.length === 0) {
-      Alert.alert('Empty Label', 'Please add at least one line before printing.');
+      Toast.show({type: 'error', text1: 'Empty Label', text2: 'Please add at least one line before printing.'});
       return;
     }
     try {
       const zpl = generateZPL(lines, selectedSize.widthIn, selectedSize.heightIn, orientation, verticalAlign);
       await connectAndPrint(zpl);
-      Alert.alert('Success', 'Label printed successfully.');
+      Toast.show({type: 'success', text1: 'Label Printed'});
     } catch {
-      Alert.alert('Print Failed', 'Could not connect to printer. Make sure it is powered on.');
+      Toast.show({type: 'error', text1: 'Print Failed', text2: 'Could not connect to printer. Make sure it is powered on.'});
     }
   };
 
@@ -95,188 +97,193 @@ export default function EditorScreen() {
   const s = makeStyles(theme);
 
   return (
-    <View style={s.container}>
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+    <KeyboardAvoidingView
+        style={s.container}
+        behavior={Platform.OS === 'android' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={80}>
+      <View style={s.container}>
+        <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
 
-        {/* Label Settings */}
-        <View style={s.card}>
-          <Text style={s.sectionTitle}>Label Settings</Text>
+          {/* Label Settings */}
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Label Settings</Text>
 
-          <Text style={s.label}>Size</Text>
-          <TouchableOpacity
-            style={s.dropdownBtn}
-            onPress={() => setSizeDropdownOpen(prev => !prev)}>
-            <Text style={s.dropdownBtnText}>{selectedSize.label}</Text>
-            <Text style={s.dropdownArrow}>{sizeDropdownOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {sizeDropdownOpen && (
-            <View style={s.dropdownList}>
-              {LABEL_SIZES.map(size => (
+            <Text style={s.label}>Size</Text>
+            <TouchableOpacity
+              style={s.dropdownBtn}
+              onPress={() => setSizeDropdownOpen(prev => !prev)}>
+              <Text style={s.dropdownBtnText}>{selectedSize.label}</Text>
+              <Text style={s.dropdownArrow}>{sizeDropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {sizeDropdownOpen && (
+              <View style={s.dropdownList}>
+                {LABEL_SIZES.map(size => (
+                  <TouchableOpacity
+                    key={size.id}
+                    style={[s.dropdownItem, selectedSize.id === size.id && s.dropdownItemActive]}
+                    onPress={() => {
+                      setSelectedSize(size);
+                      setSizeDropdownOpen(false);
+                    }}>
+                    <Text style={[s.dropdownItemText, selectedSize.id === size.id && s.dropdownItemTextActive]}>
+                      {size.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={s.label}>Orientation</Text>
+            <View style={s.row}>
+              {(['landscape', 'portrait'] as const).map(o => (
                 <TouchableOpacity
-                  key={size.id}
-                  style={[s.dropdownItem, selectedSize.id === size.id && s.dropdownItemActive]}
-                  onPress={() => {
-                    setSelectedSize(size);
-                    setSizeDropdownOpen(false);
-                  }}>
-                  <Text style={[s.dropdownItemText, selectedSize.id === size.id && s.dropdownItemTextActive]}>
-                    {size.label}
+                  key={o}
+                  style={[s.chip, orientation === o && s.chipActive]}
+                  onPress={() => setOrientation(o)}>
+                  <Text style={[s.chipText, orientation === o && s.chipTextActive]}>
+                    {o.charAt(0).toUpperCase() + o.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+
+            <Text style={s.label}>Vertical Alignment</Text>
+            <View style={s.row}>
+              {(['top', 'center', 'bottom'] as const).map(v => (
+                <TouchableOpacity
+                  key={v}
+                  style={[s.chip, verticalAlign === v && s.chipActive]}
+                  onPress={() => setVerticalAlign(v)}>
+                  <Text style={[s.chipText, verticalAlign === v && s.chipTextActive]}>
+                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {lines.length === 0 && (
+            <Text style={s.emptyText}>No lines yet. Tap + Add Line to begin.</Text>
+          )}
+
+          {lines.map((line, index) => (
+            <View key={line.id} style={s.card}>
+              <TextInput
+                style={s.textInput}
+                value={line.content}
+                onChangeText={text => updateLine(line.id, {content: text})}
+                placeholder="Enter text..."
+                placeholderTextColor={theme.placeholder}
+              />
+
+              <View style={s.row}>
+                <Text style={s.label}>Size:</Text>
+                {FONT_SIZES.map(size => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[s.chip, line.fontSize === size && s.chipActive]}
+                    onPress={() => updateLine(line.id, {fontSize: size})}>
+                    <Text style={[s.chipText, line.fontSize === size && s.chipTextActive]}>
+                      {size}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={s.row}>
+                <Text style={s.label}>Align:</Text>
+                {ALIGNMENTS.map(align => (
+                  <TouchableOpacity
+                    key={align}
+                    style={[s.chip, line.align === align && s.chipActive]}
+                    onPress={() => updateLine(line.id, {align})}>
+                    <Text style={[s.chipText, line.align === align && s.chipTextActive]}>
+                      {align}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={s.row}>
+                <TouchableOpacity
+                  style={[s.chip, line.bold && s.chipActive]}
+                  onPress={() => updateLine(line.id, {bold: !line.bold})}>
+                  <Text style={[s.chipText, line.bold && s.chipTextActive]}>Bold</Text>
+                </TouchableOpacity>
+                <View style={s.spacer} />
+                <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'up')} disabled={index === 0}>
+                  <Text style={[s.iconText, index === 0 && s.dimmed]}>▲</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'down')} disabled={index === lines.length - 1}>
+                  <Text style={[s.iconText, index === lines.length - 1 && s.dimmed]}>▼</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.deleteBtn} onPress={() => deleteLine(line.id)}>
+                  <Text style={s.deleteBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {/* Preview */}
+          {lines.length > 0 && (
+            <View style={s.card}>
+              <Text style={s.sectionTitle}>Preview</Text>
+              <View
+                style={[
+                  s.previewBox,
+                  // eslint-disable-next-line react-native/no-inline-styles
+                  {
+                    aspectRatio: orientation === 'landscape'
+                      ? selectedSize.widthIn / selectedSize.heightIn
+                      : selectedSize.heightIn / selectedSize.widthIn,
+                    justifyContent: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'space-evenly',
+                  },
+                ]}>
+                {lines.map(line => (
+                  <Text
+                    key={line.id}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    style={{
+                      width: '100%',
+                      color: theme.text,
+                      fontSize: fontSizeMap[line.fontSize],
+                      textAlign: line.align,
+                      fontWeight: line.bold ? 'bold' : 'normal',
+                    }}>
+                    {line.content || ' '}
+                  </Text>
+                ))}
+              </View>
             </View>
           )}
 
-          <Text style={s.label}>Orientation</Text>
-          <View style={s.row}>
-            {(['landscape', 'portrait'] as const).map(o => (
-              <TouchableOpacity
-                key={o}
-                style={[s.chip, orientation === o && s.chipActive]}
-                onPress={() => setOrientation(o)}>
-                <Text style={[s.chipText, orientation === o && s.chipTextActive]}>
-                  {o.charAt(0).toUpperCase() + o.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* ZPL Output */}
+          {zplOutput !== '' && (
+            <View style={s.card}>
+              <Text style={s.sectionTitle}>ZPL Output</Text>
+              <Text selectable style={s.zplText}>{zplOutput}</Text>
+            </View>
+          )}
 
-          <Text style={s.label}>Vertical Alignment</Text>
-          <View style={s.row}>
-            {(['top', 'center', 'bottom'] as const).map(v => (
-              <TouchableOpacity
-                key={v}
-                style={[s.chip, verticalAlign === v && s.chipActive]}
-                onPress={() => setVerticalAlign(v)}>
-                <Text style={[s.chipText, verticalAlign === v && s.chipTextActive]}>
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        </ScrollView>
+
+        <View style={s.buttonRow}>
+          <TouchableOpacity style={s.addButton} onPress={addLine}>
+            <Text style={s.buttonText}>+ Add Line</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.zplButton} onPress={previewZPL}>
+            <Text style={s.buttonText}>Generate ZPL</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.printButton, !printerMac && s.printButtonDisabled]}
+            onPress={printLabel}>
+            <Text style={s.buttonText}>Print</Text>
+          </TouchableOpacity>
         </View>
-
-        {lines.length === 0 && (
-          <Text style={s.emptyText}>No lines yet. Tap + Add Line to begin.</Text>
-        )}
-
-        {lines.map((line, index) => (
-          <View key={line.id} style={s.card}>
-            <TextInput
-              style={s.textInput}
-              value={line.content}
-              onChangeText={text => updateLine(line.id, {content: text})}
-              placeholder="Enter text..."
-              placeholderTextColor={theme.placeholder}
-            />
-
-            <View style={s.row}>
-              <Text style={s.label}>Size:</Text>
-              {FONT_SIZES.map(size => (
-                <TouchableOpacity
-                  key={size}
-                  style={[s.chip, line.fontSize === size && s.chipActive]}
-                  onPress={() => updateLine(line.id, {fontSize: size})}>
-                  <Text style={[s.chipText, line.fontSize === size && s.chipTextActive]}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={s.row}>
-              <Text style={s.label}>Align:</Text>
-              {ALIGNMENTS.map(align => (
-                <TouchableOpacity
-                  key={align}
-                  style={[s.chip, line.align === align && s.chipActive]}
-                  onPress={() => updateLine(line.id, {align})}>
-                  <Text style={[s.chipText, line.align === align && s.chipTextActive]}>
-                    {align}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={s.row}>
-              <TouchableOpacity
-                style={[s.chip, line.bold && s.chipActive]}
-                onPress={() => updateLine(line.id, {bold: !line.bold})}>
-                <Text style={[s.chipText, line.bold && s.chipTextActive]}>Bold</Text>
-              </TouchableOpacity>
-              <View style={s.spacer} />
-              <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'up')} disabled={index === 0}>
-                <Text style={[s.iconText, index === 0 && s.dimmed]}>▲</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.iconBtn} onPress={() => moveLine(index, 'down')} disabled={index === lines.length - 1}>
-                <Text style={[s.iconText, index === lines.length - 1 && s.dimmed]}>▼</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.deleteBtn} onPress={() => deleteLine(line.id)}>
-                <Text style={s.deleteBtnText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        {/* Preview */}
-        {lines.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.sectionTitle}>Preview</Text>
-            <View
-              style={[
-                s.previewBox,
-                // eslint-disable-next-line react-native/no-inline-styles
-                {
-                  aspectRatio: orientation === 'landscape'
-                    ? selectedSize.widthIn / selectedSize.heightIn
-                    : selectedSize.heightIn / selectedSize.widthIn,
-                  justifyContent: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'space-evenly',
-                },
-              ]}>
-              {lines.map(line => (
-                <Text
-                  key={line.id}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  // eslint-disable-next-line react-native/no-inline-styles
-                  style={{
-                    width: '100%',
-                    color: theme.text,
-                    fontSize: fontSizeMap[line.fontSize],
-                    textAlign: line.align,
-                    fontWeight: line.bold ? 'bold' : 'normal',
-                  }}>
-                  {line.content || ' '}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* ZPL Output */}
-        {zplOutput !== '' && (
-          <View style={s.card}>
-            <Text style={s.sectionTitle}>ZPL Output</Text>
-            <Text selectable style={s.zplText}>{zplOutput}</Text>
-          </View>
-        )}
-
-      </ScrollView>
-
-      <View style={s.buttonRow}>
-        <TouchableOpacity style={s.addButton} onPress={addLine}>
-          <Text style={s.buttonText}>+ Add Line</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.zplButton} onPress={previewZPL}>
-          <Text style={s.buttonText}>Generate ZPL</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.printButton, !printerMac && s.printButtonDisabled]}
-          onPress={printLabel}>
-          <Text style={s.buttonText}>Print</Text>
-        </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
