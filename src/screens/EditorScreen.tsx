@@ -339,7 +339,6 @@ const printAll = async () => {
                     </View>
 
                     {/* Alignment — hidden for barcodes */}
-                    {!line.isBarcode && (
                       <View style={s.row}>
                         <Text style={s.label}>Align:</Text>
                         {ALIGNMENTS.map(align => (
@@ -353,7 +352,6 @@ const printAll = async () => {
                           </TouchableOpacity>
                         ))}
                       </View>
-                    )}
 
                     {/* Bold + Move + Delete */}
                     <View style={s.row}>
@@ -402,7 +400,14 @@ const printAll = async () => {
                         },
                       ]}>
                       {label.lines.map(line => (
-                        <View key={line.id} style={{alignItems: 'center', width: '100%'}}>
+                        <View key={line.id} style={{
+                          alignItems: line.isBarcode
+                            ? line.align === 'left' ? 'flex-start'
+                            : line.align === 'right' ? 'flex-end'
+                            : 'center'
+                            : 'center',
+                            width: '100%'
+                          }}>
                           {line.isBarcode ? (
                             line.barcodeType === 'qr' ? (
                               line.content ? (
