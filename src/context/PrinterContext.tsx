@@ -38,24 +38,26 @@ export function PrinterProvider({children}: {children: React.ReactNode}) {
     }
   };
 
-  const connectAndPrint = async (zpl: string) => {
-    if (!printerMac) throw new Error('No printer configured');
-    
-    let device: BluetoothDevice | null = null;
-    try {
-      setIsConnected(false);
-      device = await RNBluetoothClassic.connectToDevice(printerMac);
-      setIsConnected(true);
-      await device.write(zpl);
-    } finally {
-      if (device) {
-        try {
-          await device.disconnect();
-        } catch {}
-      }
-      setIsConnected(false);
+const connectAndPrint = async (zpl: string) => {
+  if (!printerMac) throw new Error('No printer configured');
+  
+  let device: BluetoothDevice | null = null;
+  try {
+    setIsConnected(false);
+    device = await RNBluetoothClassic.connectToDevice(printerMac);
+    setIsConnected(true);
+    await device.write(zpl);
+    // Don't disconnect immediately — wait a moment before disconnecting
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  } finally {
+    if (device) {
+      try {
+        await device.disconnect();
+      } catch {}
     }
-  };
+    setIsConnected(false);
+  }
+};
 
   return (
     <PrinterContext.Provider value={{printerMac, setPrinterMac, connectAndPrint, isConnected}}>
