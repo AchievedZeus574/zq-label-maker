@@ -4,6 +4,8 @@ import {generateZPL} from '../utils/zplGenerator';
 import {usePrinter} from '../context/PrinterContext';
 import {useTheme} from '../context/ThemeContext';
 import Toast from 'react-native-toast-message';
+import QRCode from 'react-native-qrcode-svg'
+import Barcode from '@kichiyaki/react-native-barcode-generator';
 
 import {
   View,
@@ -400,19 +402,49 @@ const printAll = async () => {
                         },
                       ]}>
                       {label.lines.map(line => (
-                        <Text
-                          key={line.id}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          style={{
-                            width: '100%',
-                            color: theme.text,
-                            fontSize: fontSizeMap[line.fontSize],
-                            textAlign: line.align,
-                            fontWeight: line.bold ? 'bold' : 'normal',
-                          }}>
-                          {line.content || ' '}
-                        </Text>
+                        <View key={line.id} style={{alignItems: 'center', width: '100%'}}>
+                          {line.isBarcode ? (
+                            line.barcodeType === 'qr' ? (
+                              line.content ? (
+                                <QRCode
+                                  value={line.content}
+                                  size={fontSizeMap[line.fontSize] * 3}
+                                  color="#000000"
+                                  backgroundColor="#FFFFFF"
+                                />
+                              ) : (
+                                <Text style={{color: theme.subtext, fontSize: 12}}>Enter content to preview QR code</Text>
+                              )
+                            ) : (
+                              line.content ? (
+                                <Barcode
+                                  format={line.barcodeType === 'upca' ? 'UPC' : 'CODE128'}
+                                  value={line.content}
+                                  width={1}
+                                  height={fontSizeMap[line.fontSize] * 2}
+                                  lineColor="#000000"
+                                  background="#ffffff"
+                                  textStyle={{color: '#000000'}}
+                                />
+                              ) : (
+                                <Text style={{color: "#999999", fontSize: 12}}>Enter content to preview barcode</Text>
+                              )
+                            )
+                          ) : (
+                            <Text
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              style={{
+                                width: '100%',
+                                color: theme.text,
+                                fontSize: fontSizeMap[line.fontSize],
+                                textAlign: line.align,
+                                fontWeight: line.bold ? 'bold' : 'normal',
+                              }}>
+                              {line.content || ' '}
+                            </Text>
+                          )}
+                        </View>
                       ))}
                     </View>
                   </View>
@@ -487,7 +519,7 @@ const makeStyles = (theme: ReturnType<typeof import('../context/ThemeContext').u
   copyBtnText: {fontSize: 18, color: theme.text, lineHeight: 22},
   copyCount: {fontSize: 16, color: theme.text, minWidth: 24, textAlign: 'center' as const},
   previewContainer: {gap: 6},
-  previewBox: {width: '100%' as const, backgroundColor: theme.previewBg, borderWidth: 1, borderColor: theme.previewBorder, padding: 8},
+  previewBox: {width: '100%' as const, backgroundColor: '#ffffff', borderWidth: 1, borderColor: theme.previewBorder, padding: 8},
   addLineBtn: {backgroundColor: theme.chipBg, borderWidth: 1, borderColor: theme.chipBorder, borderRadius: 8, padding: 10, alignItems: 'center' as const},
   addLineBtnText: {color: theme.primary, fontSize: 14, fontWeight: '600' as const},
   buttonRow: {flexDirection: 'row' as const, gap: 8, margin: 16},
