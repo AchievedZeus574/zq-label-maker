@@ -7,7 +7,7 @@ export default function HomeScreen({navigation}: any) {
 
   return (
     <View style={[styles.container, {backgroundColor: theme.background}]}>
-      <Text style={[styles.title, {color: theme.text}]}>ZebraGen</Text>
+      <Text style={[styles.title, {color: theme.text}]}>ZQ Label Maker</Text>
       <TouchableOpacity
         style={[styles.button, {backgroundColor: theme.primary}]}
         onPress={() => navigation.navigate('Editor')}>

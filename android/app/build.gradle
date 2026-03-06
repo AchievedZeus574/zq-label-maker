@@ -81,9 +81,9 @@ android {
     def keystoreProperties = new Properties()
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
-    namespace "com.zebragen"
+    namespace "com.zqlabelmaker"
     defaultConfig {
-        applicationId "com.zebragen"
+        applicationId "com.zqlabelmaker"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3
