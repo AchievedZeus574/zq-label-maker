@@ -21,6 +21,8 @@ type TextLine = {
   fontSize: 'small' | 'medium' | 'large';
   align: 'left' | 'center' | 'right';
   bold: boolean;
+  isBarcode: boolean;
+  barcodeType: 'code128' | 'upca' | 'qr';
 };
 
 type LabelCard = {
@@ -61,7 +63,7 @@ export default function EditorScreen() {
 
   const [selectedSize, setSelectedSize] = useState<LabelSize>(LABEL_SIZES[0]);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
-  const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('center');
+  const [verticalAlign, setVerticalAlign] = useState<'top' | 'center' | 'bottom'>('top');
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const [labels, setLabels] = useState<LabelCard[]>([newLabel()]);
 
@@ -86,6 +88,8 @@ export default function EditorScreen() {
         fontSize: 'large',
         align: 'left',
         bold: false,
+        isBarcode: false,
+        barcodeType: 'upca'
       }],
     } : l));
   };
@@ -115,33 +119,56 @@ export default function EditorScreen() {
     }));
   };
 
-  const printAll = async () => {
-    if (!printerMac) {
-      Toast.show({type: 'error', text1: 'No Printer', text2: 'Please configure a printer first.'});
-      return;
+const printAll = async () => {
+  if (!printerMac) {
+    Toast.show({type: 'error', text1: 'No Printer', text2: 'Please configure a printer first.'});
+    return;
+  }
+
+  const hasEmpty = labels.some(l => l.lines.length === 0);
+  if (hasEmpty) {
+    Toast.show({type: 'error', text1: 'Empty Label', text2: 'All labels must have at least one line.'});
+    return;
+  }
+
+  const hasEmptyContent = labels.some(l => l.lines.some(line => line.content.trim() === ''));
+  if (hasEmptyContent) {
+    Toast.show({type: 'error', text1: 'Empty Line', text2: 'All lines must have content before printing.'});
+    return;
+  }
+
+  for (const label of labels) {
+    for (const line of label.lines) {
+      if (line.isBarcode) {
+        if (line.barcodeType === 'upca' && !/^\d{12}$/.test(line.content)) {
+          Toast.show({type: 'error', text1: 'Invalid UPC-A', text2: 'UPC-A requires exactly 12 digits.'});
+          return;
+        }
+        if (line.barcodeType === 'code128' && !/^[\x20-\x7E]+$/.test(line.content)) {
+          Toast.show({type: 'error', text1: 'Invalid Code 128', text2: 'Code 128 only supports standard ASCII characters.'});
+          return;
+        }
+      }
     }
-    const hasEmpty = labels.some(l => l.lines.length === 0);
-    if (hasEmpty) {
-      Toast.show({type: 'error', text1: 'Empty Label', text2: 'All labels must have at least one line.'});
-      return;
-    }
-    try {
-      const zpl = labels.map(label =>
-        generateZPL(
-          label.lines,
-          selectedSize.widthIn,
-          selectedSize.heightIn,
-          orientation,
-          verticalAlign,
-          label.copies,
-        )
-      ).join('\n');
-      await connectAndPrint(zpl);
-      Toast.show({type: 'success', text1: 'Job Sent', text2: `${labels.length} label(s) sent to printer.`});
-    } catch {
-      Toast.show({type: 'error', text1: 'Print Failed', text2: 'Could not connect to printer. Make sure it is powered on.'});
-    }
-  };
+  }
+
+  try {
+    const zpl = labels.map(label =>
+      generateZPL(
+        label.lines,
+        selectedSize.widthIn,
+        selectedSize.heightIn,
+        orientation,
+        verticalAlign,
+        label.copies,
+      )
+    ).join('\n');
+    await connectAndPrint(zpl);
+    Toast.show({type: 'success', text1: 'Job Sent', text2: `${labels.length} label(s) sent to printer.`});
+  } catch {
+    Toast.show({type: 'error', text1: 'Print Failed', text2: 'Could not connect to printer. Make sure it is powered on.'});
+  }
+};
 
   const s = makeStyles(theme);
 
@@ -267,8 +294,36 @@ export default function EditorScreen() {
                       placeholder="Enter text..."
                       placeholderTextColor={theme.placeholder}
                     />
+
+                    {/* Barcode Toggle */}
                     <View style={s.row}>
-                      <Text style={s.label}>Size:</Text>
+                      <TouchableOpacity
+                        style={[s.chip, line.isBarcode && s.chipActive]}
+                        onPress={() => updateLine(label.id, line.id, {isBarcode: !line.isBarcode})}>
+                        <Text style={[s.chipText, line.isBarcode && s.chipTextActive]}>Barcode</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Barcode Type */}
+                    {line.isBarcode && (
+                      <View style={s.row}>
+                        <Text style={s.label}>Type:</Text>
+                        {(['code128', 'upca', 'qr'] as const).map(type => (
+                          <TouchableOpacity
+                            key={type}
+                            style={[s.chip, line.barcodeType === type && s.chipActive]}
+                            onPress={() => updateLine(label.id, line.id, {barcodeType: type})}>
+                            <Text style={[s.chipText, line.barcodeType === type && s.chipTextActive]}>
+                              {type === 'code128' ? 'Code 128' : type === 'upca' ? 'UPC-A' : 'QR Code'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Size / Height */}
+                    <View style={s.row}>
+                      <Text style={s.label}>{line.isBarcode ? 'Height:' : 'Size:'}</Text>
                       {FONT_SIZES.map(size => (
                         <TouchableOpacity
                           key={size}
@@ -280,25 +335,33 @@ export default function EditorScreen() {
                         </TouchableOpacity>
                       ))}
                     </View>
+
+                    {/* Alignment — hidden for barcodes */}
+                    {!line.isBarcode && (
+                      <View style={s.row}>
+                        <Text style={s.label}>Align:</Text>
+                        {ALIGNMENTS.map(align => (
+                          <TouchableOpacity
+                            key={align}
+                            style={[s.chip, line.align === align && s.chipActive]}
+                            onPress={() => updateLine(label.id, line.id, {align})}>
+                            <Text style={[s.chipText, line.align === align && s.chipTextActive]}>
+                              {align}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Bold + Move + Delete */}
                     <View style={s.row}>
-                      <Text style={s.label}>Align:</Text>
-                      {ALIGNMENTS.map(align => (
+                      {!line.isBarcode && (
                         <TouchableOpacity
-                          key={align}
-                          style={[s.chip, line.align === align && s.chipActive]}
-                          onPress={() => updateLine(label.id, line.id, {align})}>
-                          <Text style={[s.chipText, line.align === align && s.chipTextActive]}>
-                            {align}
-                          </Text>
+                          style={[s.chip, line.bold && s.chipActive]}
+                          onPress={() => updateLine(label.id, line.id, {bold: !line.bold})}>
+                          <Text style={[s.chipText, line.bold && s.chipTextActive]}>Bold</Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={s.row}>
-                      <TouchableOpacity
-                        style={[s.chip, line.bold && s.chipActive]}
-                        onPress={() => updateLine(label.id, line.id, {bold: !line.bold})}>
-                        <Text style={[s.chipText, line.bold && s.chipTextActive]}>Bold</Text>
-                      </TouchableOpacity>
+                      )}
                       <View style={s.spacer} />
                       <TouchableOpacity
                         style={s.iconBtn}

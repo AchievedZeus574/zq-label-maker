@@ -6,12 +6,16 @@ type TextLine = {
   fontSize: 'small' | 'medium' | 'large';
   align: 'left' | 'center' | 'right';
   bold: boolean;
+  isBarcode: boolean;
+  barcodeType: 'code128' | 'upca' | 'qr';
 };
 
 type Orientation = 'portrait' | 'landscape';
 type VerticalAlign = 'top' | 'center' | 'bottom';
 
 const fontHeightMap = {small: 20, medium: 35, large: 55};
+const barcodeHeightMap = {small: 50, medium: 80, large: 120};
+const qrSizeMap = {small: 3, medium: 5, large: 8};
 
 export function generateZPL(
   lines: TextLine[],
@@ -72,18 +76,58 @@ export function generateZPL(
   zpl += `^PW${labelWidthDots}\n`;
   zpl += `^LL${labelHeightDots}\n`;
 
-  let currentX = startX;
-  let currentY = startY;
-  lines.forEach(line => {
-    const fontHeight = fontHeightMap[line.fontSize];
-    const fontWidth = Math.round(fontHeight * 0.6);
+let currentX = startX;
+let currentY = startY;
+
+lines.forEach(line => {
+  const fontHeight = fontHeightMap[line.fontSize];
+  const fontWidth = Math.round(fontHeight * 0.6);
+  const barcodeHeight = barcodeHeightMap[line.fontSize];
+
+  if (line.isBarcode) {
+    if (orientation === 'landscape') {
+      if (line.barcodeType === 'qr') {
+        const qrSize = qrSizeMap[line.fontSize];
+        zpl += `^FO${currentX},${paddingDots}\n`;
+        zpl += `^BQN,2,${qrSize}\n`;
+        zpl += `^FDQA,${line.content}^FS\n`;
+        currentY += (qrSize * 22) + lineGap;
+      } else {
+        zpl += `^FO${currentX},${paddingDots}\n`;
+        if (line.barcodeType === 'upca') {
+          zpl += `^BUN,${barcodeHeight},Y,N,N\n`;
+        } else {
+          zpl += `^BCN,${barcodeHeight},Y,N,N\n`;
+        }
+        zpl += `^FD${line.content}^FS\n`;
+        currentY += barcodeHeight + lineGap;
+      }
+    } else {
+      if (line.barcodeType === 'qr') {
+        const qrSize = qrSizeMap[line.fontSize];
+        zpl += `^FO${paddingDots},${currentY}\n`;
+        zpl += `^BQN,2,${qrSize}\n`;
+        zpl += `^FDQA,${line.content}^FS\n`;
+        currentY += (qrSize * 22) + lineGap;
+      } else {
+        zpl += `^FO${paddingDots},${currentY}\n`;
+        if (line.barcodeType === 'upca') {
+          zpl += `^BUN,${barcodeHeight},Y,N,N\n`;
+        } else {
+          zpl += `^BCN,${barcodeHeight},Y,N,N\n`;
+        }
+        zpl += `^FD${line.content}^FS\n`;
+        currentY += barcodeHeight + lineGap;
+      }
+    }
+  } else {
     if (orientation === 'landscape') {
       zpl += `^FO${currentX},${currentY}\n`;
       zpl += `^A0N,${fontHeight},${fontWidth}\n`;
       zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
       zpl += `^FD${line.content}^FS\n`;
       if (line.bold) {
-        zpl += `^FO${currentX + 1},${currentY}\n`
+        zpl += `^FO${currentX + 1},${currentY}\n`;
         zpl += `^A0N,${fontHeight},${fontWidth}\n`;
         zpl += `^FB${usableWidth},1,0,${alignMap[line.align]},0\n`;
         zpl += `^FD${line.content}^FS\n`;
@@ -107,7 +151,8 @@ export function generateZPL(
         zpl += `^FD${line.content}^FS\n`;
       }
     }
-  });
+  }
+});
 
   zpl += '^XZ\n';
   return zpl;
